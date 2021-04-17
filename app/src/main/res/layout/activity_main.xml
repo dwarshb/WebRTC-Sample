@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/remote_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="150dp"
+        app:cardCornerRadius="16dp"
+        android:layout_height="200dp">
+        <TextView
+            android:background="@color/cardview_dark_background"
+            android:text="You"
+            android:textColor="@color/white"
+            android:padding="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <org.webrtc.SurfaceViewRenderer
+            android:elevation="16dp"
+            android:id="@+id/local_view"
+            android:layout_margin="8dp"
+            android:layout_width="150dp"
+            android:layout_height="200dp" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <ProgressBar
+        android:layout_centerInParent="true"
+        android:id="@+id/remote_view_loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        app:layout_constraintBottom_toBottomOf="@id/remote_view"
+        app:layout_constraintEnd_toEndOf="@id/remote_view"
+        app:layout_constraintStart_toStartOf="@id/remote_view"
+        app:layout_constraintTop_toTopOf="@id/remote_view" />
+    <ImageView
+        android:id="@+id/switch_camera_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:layout_alignParentEnd="true"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="12dp"
+        android:background="@drawable/circle_background"
+        app:backgroundTint="@android:color/darker_gray"
+        app:srcCompat="@drawable/ic_baseline_cameraswitch_24" />
+    <ImageView
+        android:id="@+id/end_call_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="12dp"
+        android:background="@drawable/circle_background"
+        app:backgroundTint="@android:color/holo_red_dark"
+        app:srcCompat="@drawable/ic_baseline_call_end_24" />
+
+</RelativeLayout>

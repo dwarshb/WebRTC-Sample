@@ -3,7 +3,6 @@ package com.dwarsh.webrtcsample
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Camera
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
@@ -16,23 +15,29 @@ import kotlinx.android.synthetic.main.activity_start.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
-import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 
 @ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val CAMERA_PERMISSION_REQUEST_CODE = 1
+        private const val CAMERA_AUDIO_PERMISSION_REQUEST_CODE = 1
         private const val CAMERA_PERMISSION = Manifest.permission.CAMERA
+        private const val AUDIO_PERMISSION = Manifest.permission.RECORD_AUDIO
     }
 
     private lateinit var rtcClient: RTCClient
     private lateinit var signallingClient: SignalingClient
 
+    private val audioManager by lazy { RTCAudioManager.create(this) }
+
     private var meetingID : String = "test-call"
 
     private var isJoin = false
+
+    private var isMute = false
+
+    private var isVideoPaused = false
 
     private val sdpObserver = object : AppSdpObserver() {
         override fun onCreateSuccess(p0: SessionDescription?) {
@@ -48,25 +53,53 @@ class MainActivity : AppCompatActivity() {
             meetingID = intent.getStringExtra("meetingID")!!
         if (intent.hasExtra("isJoin"))
             isJoin = intent.getBooleanExtra("isJoin",false)
-        checkCameraPermission()
-
+        checkCameraAndAudioPermission()
+        audioManager.selectAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
         switch_camera_button.setOnClickListener {
             rtcClient.switchCamera()
         }
+
+        video_button.setOnClickListener {
+            if (isVideoPaused) {
+                isVideoPaused = false
+                video_button.setImageResource(R.drawable.ic_baseline_videocam_off_24)
+            } else {
+                isVideoPaused = true
+                video_button.setImageResource(R.drawable.ic_baseline_videocam_24)
+            }
+            rtcClient.enableVideo(isVideoPaused)
+        }
+        mic_button.setOnClickListener {
+            if (isMute) {
+                isMute = false
+                mic_button.setImageResource(R.drawable.ic_baseline_mic_off_24)
+            } else {
+                isMute = true
+                mic_button.setImageResource(R.drawable.ic_baseline_mic_24)
+            }
+            rtcClient.enableAudio(isMute)
+        }
         end_call_button.setOnClickListener {
             rtcClient.endCall(meetingID)
+            remote_view.isGone = false
+            Constants.isCallEnded = true
+            finish()
+            startActivity(Intent(this@MainActivity, StartActivity::class.java))
         }
     }
 
-    private fun checkCameraPermission() {
-        if (ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission()
+    private fun checkCameraAndAudioPermission() {
+        if ((ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION)
+                    != PackageManager.PERMISSION_GRANTED) &&
+            (ContextCompat.checkSelfPermission(this,AUDIO_PERMISSION)
+                    != PackageManager.PERMISSION_GRANTED)) {
+            requestCameraAndAudioPermission()
         } else {
-            onCameraPermissionGranted()
+            onCameraAndAudioPermissionGranted()
         }
     }
 
-    private fun onCameraPermissionGranted() {
+    private fun onCameraAndAudioPermissionGranted() {
         rtcClient = RTCClient(
                 application,
                 object : PeerConnectionObserver() {
@@ -88,10 +121,7 @@ class MainActivity : AppCompatActivity() {
         signallingClient =  SignalingClient(meetingID,createSignallingClientListener())
         if (!isJoin)
             rtcClient.call(sdpObserver,meetingID)
-        end_call_button.setOnClickListener {
 
-            remote_view.isGone = false
-        }
     }
 
     private fun createSignallingClientListener() = object : SignalingClientListener {
@@ -102,11 +132,13 @@ class MainActivity : AppCompatActivity() {
         override fun onOfferReceived(description: SessionDescription) {
             rtcClient.onRemoteSessionReceived(description)
             rtcClient.answer(sdpObserver,meetingID)
+            Constants.isIntiatedNow = false
             remote_view_loading.isGone = true
         }
 
         override fun onAnswerReceived(description: SessionDescription) {
             rtcClient.onRemoteSessionReceived(description)
+            Constants.isIntiatedNow = false
             remote_view_loading.isGone = true
         }
 
@@ -115,27 +147,32 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onCallEnded() {
-            rtcClient.endCall(meetingID)
-            finish()
-            startActivity(Intent(this@MainActivity,StartActivity::class.java))
+            if (!Constants.isCallEnded) {
+                Constants.isCallEnded = true
+                rtcClient.endCall(meetingID)
+                finish()
+                startActivity(Intent(this@MainActivity, StartActivity::class.java))
+            }
         }
     }
 
-    private fun requestCameraPermission(dialogShown: Boolean = false) {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, CAMERA_PERMISSION) && !dialogShown) {
+    private fun requestCameraAndAudioPermission(dialogShown: Boolean = false) {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, CAMERA_PERMISSION) &&
+            ActivityCompat.shouldShowRequestPermissionRationale(this, AUDIO_PERMISSION) &&
+            !dialogShown) {
             showPermissionRationaleDialog()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(CAMERA_PERMISSION), CAMERA_PERMISSION_REQUEST_CODE)
+            ActivityCompat.requestPermissions(this, arrayOf(CAMERA_PERMISSION, AUDIO_PERMISSION), CAMERA_AUDIO_PERMISSION_REQUEST_CODE)
         }
     }
 
     private fun showPermissionRationaleDialog() {
         AlertDialog.Builder(this)
-                .setTitle("Camera Permission Required")
-                .setMessage("This app need the camera to function")
+                .setTitle("Camera And Audio Permission Required")
+                .setMessage("This app need the camera and audio to function")
                 .setPositiveButton("Grant") { dialog, _ ->
                     dialog.dismiss()
-                    requestCameraPermission(true)
+                    requestCameraAndAudioPermission(true)
                 }
                 .setNegativeButton("Deny") { dialog, _ ->
                     dialog.dismiss()
@@ -146,15 +183,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            onCameraPermissionGranted()
+        if (requestCode == CAMERA_AUDIO_PERMISSION_REQUEST_CODE && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+            onCameraAndAudioPermissionGranted()
         } else {
             onCameraPermissionDenied()
         }
     }
 
     private fun onCameraPermissionDenied() {
-        Toast.makeText(this, "Camera Permission Denied", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Camera and Audio Permission Denied", Toast.LENGTH_LONG).show()
     }
 
     override fun onDestroy() {

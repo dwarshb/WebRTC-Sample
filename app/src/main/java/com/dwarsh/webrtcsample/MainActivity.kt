@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
@@ -13,9 +14,8 @@ import androidx.core.view.isGone
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_start.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.webrtc.IceCandidate
-import org.webrtc.MediaStream
-import org.webrtc.SessionDescription
+import org.webrtc.*
+import java.util.*
 
 @ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity() {
@@ -31,6 +31,8 @@ class MainActivity : AppCompatActivity() {
 
     private val audioManager by lazy { RTCAudioManager.create(this) }
 
+    val TAG = "MainActivity"
+
     private var meetingID : String = "test-call"
 
     private var isJoin = false
@@ -38,6 +40,8 @@ class MainActivity : AppCompatActivity() {
     private var isMute = false
 
     private var isVideoPaused = false
+
+    private var inSpeakerMode = true
 
     private val sdpObserver = object : AppSdpObserver() {
         override fun onCreateSuccess(p0: SessionDescription?) {
@@ -59,6 +63,17 @@ class MainActivity : AppCompatActivity() {
             rtcClient.switchCamera()
         }
 
+        audio_output_button.setOnClickListener {
+            if (inSpeakerMode) {
+                inSpeakerMode = false
+                audio_output_button.setImageResource(R.drawable.ic_baseline_hearing_24)
+                audioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.EARPIECE)
+            } else {
+                inSpeakerMode = true
+                audio_output_button.setImageResource(R.drawable.ic_baseline_speaker_up_24)
+                audioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
+            }
+        }
         video_button.setOnClickListener {
             if (isVideoPaused) {
                 isVideoPaused = false
@@ -105,23 +120,52 @@ class MainActivity : AppCompatActivity() {
                 object : PeerConnectionObserver() {
                     override fun onIceCandidate(p0: IceCandidate?) {
                         super.onIceCandidate(p0)
-                        signallingClient.sendIceCandidate(p0,isJoin)
+                        signallingClient.sendIceCandidate(p0, isJoin)
                         rtcClient.addIceCandidate(p0)
                     }
 
                     override fun onAddStream(p0: MediaStream?) {
                         super.onAddStream(p0)
+                        Log.e(TAG, "onAddStream: $p0")
                         p0?.videoTracks?.get(0)?.addSink(remote_view)
+                    }
+
+                    override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
+                        Log.e(TAG, "onIceConnectionChange: $p0")
+                    }
+
+                    override fun onIceConnectionReceivingChange(p0: Boolean) {
+                        Log.e(TAG, "onIceConnectionReceivingChange: $p0")
+                    }
+
+                    override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
+                        Log.e(TAG, "onConnectionChange: $newState")
+                    }
+
+                    override fun onDataChannel(p0: DataChannel?) {
+                        Log.e(TAG, "onDataChannel: $p0")
+                    }
+
+                    override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
+                        Log.e(TAG, "onStandardizedIceConnectionChange: $newState")
+                    }
+
+                    override fun onAddTrack(p0: RtpReceiver?, p1: Array<out MediaStream>?) {
+                        Log.e(TAG, "onAddTrack: $p0 \n $p1")
+                    }
+
+                    override fun onTrack(transceiver: RtpTransceiver?) {
+                        Log.e(TAG, "onTrack: $transceiver" )
                     }
                 }
         )
+
         rtcClient.initSurfaceView(remote_view)
         rtcClient.initSurfaceView(local_view)
         rtcClient.startLocalVideoCapture(local_view)
         signallingClient =  SignalingClient(meetingID,createSignallingClientListener())
         if (!isJoin)
             rtcClient.call(sdpObserver,meetingID)
-
     }
 
     private fun createSignallingClientListener() = object : SignalingClientListener {
@@ -131,8 +175,8 @@ class MainActivity : AppCompatActivity() {
 
         override fun onOfferReceived(description: SessionDescription) {
             rtcClient.onRemoteSessionReceived(description)
-            rtcClient.answer(sdpObserver,meetingID)
             Constants.isIntiatedNow = false
+            rtcClient.answer(sdpObserver,meetingID)
             remote_view_loading.isGone = true
         }
 

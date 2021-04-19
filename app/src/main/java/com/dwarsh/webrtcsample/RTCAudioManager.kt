@@ -65,8 +65,6 @@ class RTCAudioManager(context: Context) {
 
     // Contains the user-selected audio device which overrides the predefined
     // selection scheme.
-    // TODO(henrika): always set to AudioDevice.NONE today. Add support for
-    // explicit selection based on choice by userSelectedAudioDevice.
     private var userSelectedAudioDevice: AudioDevice? = null
 
     // Contains speakerphone setting: auto, true or false
@@ -117,7 +115,7 @@ class RTCAudioManager(context: Context) {
 //        else if (amState == AudioManagerState.UNINITIALIZED) {
 //            preInitAudio()
 //        }
-        // TODO(henrika): perhaps call new method called preInitAudio() here if UNINITIALIZED.
+        // TODO perhaps call new method called preInitAudio() here if UNINITIALIZED.
         Log.d(TAG, "AudioManager starts...")
         this.audioManagerEvents = audioManagerEvents
         amState = AudioManagerState.RUNNING
@@ -136,8 +134,7 @@ class RTCAudioManager(context: Context) {
                 // The |focusChange| value indicates whether the focus was gained, whether the focus was lost,
                 // and whether that loss is transient, or whether the new focus holder will hold it for an
                 // unknown amount of time.
-                // TODO(henrika): possibly extend support of handling audio-focus changes. Only contains
-                // logging for now.
+
                 val typeOfChange: String
                 when (focusChange) {
                     AudioManager.AUDIOFOCUS_GAIN -> typeOfChange = "AUDIOFOCUS_GAIN"
@@ -192,7 +189,6 @@ class RTCAudioManager(context: Context) {
         Log.d(TAG, "AudioManager started")
     }
 
-    // TODO(henrika): audioManager.abandonAudioFocus() is deprecated.
     fun stop() {
         Log.d(TAG, "stop")
         ThreadUtils.checkIsOnMainThread()
@@ -236,7 +232,6 @@ class RTCAudioManager(context: Context) {
 
     /**
      * Changes default audio device.
-     * TODO(henrika): add usage of this method in the AppRTCMobile client.
      */
     fun setDefaultAudioDevice(defaultDevice: AudioDevice?) {
         ThreadUtils.checkIsOnMainThread()
@@ -340,7 +335,6 @@ class RTCAudioManager(context: Context) {
 
     /**
      * Updates list of possible audio devices and make new device selection.
-     * TODO(henrika): add unit test to verify all state transitions.
      */
     fun updateAudioDeviceState() {
         ThreadUtils.checkIsOnMainThread()

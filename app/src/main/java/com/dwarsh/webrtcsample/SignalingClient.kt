@@ -89,7 +89,7 @@ class SignalingClient(
                                 listener.onAnswerReceived(SessionDescription(
                                     SessionDescription.Type.ANSWER,data["sdp"].toString()))
                             SDPtype = "Answer"
-                        } else if (!Constants.isCallEnded && !Constants.isIntiatedNow && data.containsKey("type") &&
+                        } else if (!Constants.isIntiatedNow && data.containsKey("type") &&
                             data.getValue("type").toString() == "END_CALL") {
                             listener.onCallEnded()
                             SDPtype = "End Call"

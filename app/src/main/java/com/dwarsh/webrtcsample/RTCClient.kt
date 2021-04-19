@@ -2,13 +2,12 @@ package com.dwarsh.webrtcsample
 
 import android.app.Application
 import android.content.Context
-import android.media.AudioDeviceInfo
 import android.util.Log
+import androidx.annotation.Nullable
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import org.json.JSONObject
 import org.webrtc.*
-import org.webrtc.audio.AudioDeviceModule
+
 
 class RTCClient(
         context: Application,
@@ -90,7 +89,7 @@ class RTCClient(
         val surfaceTextureHelper = SurfaceTextureHelper.create(Thread.currentThread().name, rootEglBase.eglBaseContext)
         (videoCapturer as VideoCapturer).initialize(surfaceTextureHelper, localVideoOutput.context, localVideoSource.capturerObserver)
         videoCapturer.startCapture(320, 240, 60)
-        localAudioTrack = peerConnectionFactory.createAudioTrack(LOCAL_TRACK_ID+"_audio", audioSource);
+        localAudioTrack = peerConnectionFactory.createAudioTrack(LOCAL_TRACK_ID + "_audio", audioSource);
         localVideoTrack = peerConnectionFactory.createVideoTrack(LOCAL_TRACK_ID, localVideoSource)
         localVideoTrack?.addSink(localVideoOutput)
         val localStream = peerConnectionFactory.createLocalMediaStream(LOCAL_STREAM_ID)
@@ -99,7 +98,7 @@ class RTCClient(
         peerConnection?.addStream(localStream)
     }
 
-    private fun PeerConnection.call(sdpObserver: SdpObserver,meetingID: String) {
+    private fun PeerConnection.call(sdpObserver: SdpObserver, meetingID: String) {
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
         }
@@ -143,29 +142,29 @@ class RTCClient(
             }
 
             override fun onCreateFailure(p0: String?) {
-                Log.e(TAG, "onCreateFailure: $p0" )
+                Log.e(TAG, "onCreateFailure: $p0")
             }
         }, constraints)
     }
 
-    private fun PeerConnection.answer(sdpObserver: SdpObserver,meetingID: String) {
+    private fun PeerConnection.answer(sdpObserver: SdpObserver, meetingID: String) {
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
         }
         createAnswer(object : SdpObserver by sdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 val answer = hashMapOf(
-                    "sdp" to desc?.description,
-                    "type" to desc?.type
+                        "sdp" to desc?.description,
+                        "type" to desc?.type
                 )
                 db.collection("calls").document(meetingID)
-                    .set(answer)
-                    .addOnSuccessListener {
-                        Log.e(TAG, "DocumentSnapshot added")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Error adding document", e)
-                    }
+                        .set(answer)
+                        .addOnSuccessListener {
+                            Log.e(TAG, "DocumentSnapshot added")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Error adding document", e)
+                        }
                 setLocalDescription(object : SdpObserver {
                     override fun onSetFailure(p0: String?) {
                         Log.e(TAG, "onSetFailure: $p0")
@@ -185,15 +184,16 @@ class RTCClient(
                 }, desc)
                 sdpObserver.onCreateSuccess(desc)
             }
+
             override fun onCreateFailure(p0: String?) {
                 Log.e(TAG, "onCreateFailureRemote: $p0")
             }
         }, constraints)
     }
 
-    fun call(sdpObserver: SdpObserver,meetingID : String) = peerConnection?.call(sdpObserver,meetingID)
+    fun call(sdpObserver: SdpObserver, meetingID: String) = peerConnection?.call(sdpObserver, meetingID)
 
-    fun answer(sdpObserver: SdpObserver,meetingID: String) = peerConnection?.answer(sdpObserver,meetingID)
+    fun answer(sdpObserver: SdpObserver, meetingID: String) = peerConnection?.answer(sdpObserver, meetingID)
 
     fun onRemoteSessionReceived(sessionDescription: SessionDescription) {
         remoteSessionDescription = sessionDescription
@@ -214,6 +214,7 @@ class RTCClient(
                 Log.e(TAG, "onCreateFailure")
             }
         }, sessionDescription)
+
     }
 
     fun addIceCandidate(iceCandidate: IceCandidate?) {
@@ -250,12 +251,12 @@ class RTCClient(
         peerConnection?.close()
     }
 
-    fun enableVideo(videoEnabled : Boolean) {
+    fun enableVideo(videoEnabled: Boolean) {
         if (localVideoTrack !=null)
             localVideoTrack?.setEnabled(videoEnabled)
     }
 
-    fun enableAudio(audioEnabled : Boolean) {
+    fun enableAudio(audioEnabled: Boolean) {
         if (localAudioTrack != null)
             localAudioTrack?.setEnabled(audioEnabled)
     }
